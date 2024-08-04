@@ -70,6 +70,7 @@ class GenerateFrames:
 conf = ConfigReader('data/config.yml')
 cam = CameraEntity(hostname=conf.get_hostname(),
                    subnet=conf.get_subnet(),
+                   mac=conf.get_mac(),
                    username=conf.get_auth().get('user'),
                    password=conf.get_auth().get('pw'))
 cam.init_streams()

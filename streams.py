@@ -34,6 +34,9 @@ class ConfigReader:
     def get_subnet(self):
         return self.config_data.get('host', {}).get('subnet')
 
+    def get_mac(self):
+        return self.config_data.get('host', {}).get('mac')
+
     def get_auth(self):
         return {
             'user': self.config_data.get('auth', {}).get('user'),
@@ -43,7 +46,7 @@ class ConfigReader:
 class CameraEntity:
     def __init__(self, **kwargs):
         self.hostname = kwargs.get('hostname')
-        self._nd = NetworkDevice(hostname=self.hostname, subnet = kwargs.get('subnet'))
+        self._nd = NetworkDevice(hostname=self.hostname, subnet = kwargs.get('subnet'), mac=kwargs.get('mac'))
         self._get_ip()
         
         self.username = kwargs.get('username')

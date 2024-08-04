@@ -9,12 +9,13 @@ class NetworkDevice:
     def __init__(self, **kwargs):
         self.hostname = kwargs.get('hostname')
         self.subnet = kwargs.get('subnet')
+        self.mac = kwargs.get('mac')
         
         self.status = None
         self._scan_for_ip()
         
     def _scan_for_ip(self):
-        self.ip = DeviceScanner().find_host(self.hostname, scan = self.subnet)
+        self.ip = DeviceScanner().find_host(self.hostname, scan = self.subnet, mac=self.mac)
         
     def get_ip(self):
         while DeviceScanner().check_if_is_online(self.ip)==False:
@@ -41,7 +42,7 @@ class DeviceScanner:
     def _clean_hostname(self, hostname):
         return '.'.join(hostname.split(".")[:-1])
             
-    def find_host(self, hostname, scan=None):
+    def find_host(self, hostname, mac=None, scan=None):
         """Finds the IP address of the device with the given hostname by scanning the local network."""
         if scan == None:
             interfaces = []
@@ -56,6 +57,8 @@ class DeviceScanner:
                 for ip in self.scanner.all_hosts():
                     print(f'Scanning {self._clean_hostname(self.scanner[ip].hostname())} / {ip}')
                     if self._clean_hostname(self.scanner[ip].hostname()) == hostname:
+                        return ip
+                    elif self.scanner[ip]['addresses'].get('mac', 'N/A') == mac:
                         return ip
         except Exception as e:
             print(f"Error scanning for host {hostname}: {e}")
