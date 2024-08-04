@@ -8,3 +8,4 @@ pyyaml
 flask-socketio
 gunicorn
 pytz
+psutil
