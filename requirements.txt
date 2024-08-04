@@ -1,0 +1,10 @@
+requests
+opencv-python
+pandas
+numpy
+imutils
+python-nmap
+pyyaml
+flask-socketio
+gunicorn
+pytz

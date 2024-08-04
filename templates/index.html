@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Stream</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.js"></script>
+    <style>{% include 'styles.css' %}</style>
+
+</head>
+<body>
+    <div class="container">
+        <img id="video" src="" alt="Video Stream" />
+        <div class="alert-container">
+            <div id="alert-level"></div>
+            <button id="playButton">Alarm</button>
+        </div>
+        <div>
+            <button id="setBaselineButton">Set Baseline</button>
+        </div>
+    </div>
+
+<script>
+    {% include 'script.js' %}
+</script>
+
+</body>
+</html>

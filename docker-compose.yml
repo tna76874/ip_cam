@@ -1,0 +1,10 @@
+services:
+  ipcam:
+    image: ghcr.io/tna76874/ipcam:latest
+    build: "."
+    ports:
+      - "5000:5000"
+    container_name: ipcam-container
+    restart: always
+    volumes:
+      - ./data:/app/data
