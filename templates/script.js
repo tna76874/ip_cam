@@ -97,14 +97,40 @@ function playAlertAudio() {
     }
 }
 
-// // Event-Listener für die Schaltfläche
-// document.getElementById('playButton').addEventListener('click', function() {
-//     playAlertAudio();
-// });
-
 socket.on('disconnect', function() {
     console.log('WebSocket disconnected');
 });
+
+// THRESHOLD SETZEN
+async function fetchThreshold() {
+    const response = await fetch('/api/server_time');
+    const data = await response.json();
+    const threshold = data.threshold;
+    document.getElementById('thresholdSlider').value = threshold;
+    document.getElementById('thresholdValue').innerText = threshold;
+}
+
+async function setThreshold(value) {
+    const response = await fetch('/api/set_audio_threshold', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ threshold: parseFloat(value) }),
+    });
+    const data = await response.json();
+    console.log(data.message);
+}
+
+function onSliderChange(event) {
+    const value = event.target.value;
+    document.getElementById('thresholdValue').innerText = value;
+    setThreshold(value);
+}
+
+window.onload = fetchThreshold;
+
+// DOM
 
 document.addEventListener('DOMContentLoaded', function() {
     const baselinebutton = document.getElementById('setBaselineButton');

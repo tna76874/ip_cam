@@ -141,6 +141,22 @@ def set_baseline():
     }
     return jsonify(response)
 
+@app.route('/api/set_audio_threshold', methods=['POST'])
+def set_audio_threshold():
+    data = request.get_json()
+        
+    frame_generator._alert_a.set_threshold(data.get('threshold'))
+        
+    response = {
+        'status': 'success',
+        'message': 'Threshold gesetzt',
+    }
+    return jsonify(response)
+
+@app.route('/api/server_time', methods=['GET'])
+def get_audio_threshold():
+    return jsonify({'threshold': frame_generator._alert_a._threshold})
+
 @app.route('/api/alert_enable', methods=['GET'])
 def api_alert_enable():
     frame_generator._alert.enable()

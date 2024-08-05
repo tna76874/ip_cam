@@ -93,6 +93,9 @@ class AudioAlert(AlertEntity):
         self._set_data(data)
         self._evaluate()
         
+    def set_threshold(self, threshold):
+        self._threshold = threshold
+        
     def _set_data(self, data):
         self.data = data
         
