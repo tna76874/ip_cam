@@ -36,24 +36,45 @@ class GenerateFrames:
         self.running.clear()
         if self.thread is not None:
             self.thread.join()
+    
+    def _compress_frame(self, frame=None, quality=100):
+        if quality!=100:
+            encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), quality]
+            _, buffer = cv2.imencode('.jpg', frame, encode_param)
+        else:
+            buffer = frame
+        encoded = base64.b64encode(buffer).decode('utf-8')
+        return encoded
 
     def _generate_frames(self):
+        quality_mapping = {
+            0.1: 100,
+            1: 80,
+            2: 30,
+            5: 10,
+        }
         while self.running.is_set():
             self.cam.a.start_monitoring()
             
             frame = self.cam.get_frame() 
             if frame is not None:
-                _, buffer = cv2.imencode('.jpg', frame)
                 self._alert_v.add_frame(frame)
-                frame_data = base64.b64encode(buffer).decode('utf-8')
                 video_json =  {
-                                'data': frame_data,
                                 'time' : datetime.datetime.now(pytz.timezone('Europe/Berlin')).isoformat(),
                               }
                 for client in self.clients.keys():
                     timediff = self.clients.get(client, 0) or 0
-                    if timediff >= 0.2:
+                    quality = None
+                    for threshold, q in quality_mapping.items():
+                        if timediff <= threshold:
+                            quality = q
+                            break
+                        
+                    if quality is not None:
+                        video_json['data'] = self._compress_frame(frame=frame, quality=quality)
+                    else:
                         video_json['data'] = False
+                        
                     socketio.emit('frame', video_json, room=client)
                         
             
