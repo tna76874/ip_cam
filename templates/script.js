@@ -41,14 +41,11 @@ socket.on('frame', function(data) {
     const frameTime = new Date(data.time); // Zeit des empfangenen Frames
     const timeDiff = (currentTime - frameTime) / 1000; // Zeitdifferenz in Sekunden
 
-    // Überprüfen, ob die Zeitdifferenz unter 0,2 Sekunden liegt
-    if (timeDiff < 0.2) {
-        document.getElementById('video').src = 'data:image/jpeg;base64,' + data.data;
-        lastFrameTime = frameTime; // Aktualisiere den Zeitstempel des letzten Frames
-        console.log('Frame lag: ' + timeDiff + ' seconds');
-    } else {
-        console.log('Frame skipped due to lag: ' + timeDiff + ' seconds');
-    }
+    document.getElementById('video').src = 'data:image/jpeg;base64,' + data.data;
+    lastFrameTime = frameTime; // Aktualisiere den Zeitstempel des letzten Frames
+
+    // Lag-Anzeige immer aktualisieren
+    document.getElementById('lagDisplay').innerText = 'Δ' + timeDiff.toFixed(2) + 's';
 });
 
 // AUDIO

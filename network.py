@@ -59,9 +59,9 @@ class DeviceScanner:
                 self.scanner.scan(hosts=subnet, arguments='-sn')
                 for ip in self.scanner.all_hosts():
                     print(f'Scanning {self._clean_hostname(self.scanner[ip].hostname())} / {ip}')
-                    if self._clean_hostname(self.scanner[ip].hostname()) == hostname:
+                    if self.scanner[ip]['addresses'].get('mac', 'N/A') == mac:
                         return ip
-                    elif self.scanner[ip]['addresses'].get('mac', 'N/A') == mac:
+                    elif self._clean_hostname(self.scanner[ip].hostname()) == hostname:
                         return ip
         except Exception as e:
             print(f"Error scanning for host {hostname}: {e}")
