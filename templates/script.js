@@ -30,6 +30,8 @@ socket.on('frame', function(data) {
 
         // Lag-Anzeige immer aktualisieren
         document.getElementById('lagDisplay').innerText = 'Δ' + timeDiff.toFixed(2) + 's';
+
+        socket.emit('time_diff', timeDiff);
     });
 });
 

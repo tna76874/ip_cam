@@ -15,7 +15,7 @@ class GenerateFrames:
     def __init__(self, socketio=None, cam=None):
         self.cam = cam
         self.socketio = socketio
-        self.clients = set()
+        self.clients = dict()
         self.running = Event()
         self.thread = None
         self.alert = False
@@ -50,7 +50,9 @@ class GenerateFrames:
                                 'data': frame_data,
                                 'time' : datetime.datetime.now(pytz.timezone('Europe/Berlin')).isoformat(),
                               }
-                socketio.emit('frame', video_json)
+                for client in self.clients.keys():
+                    if self.clients.get(client, 0) or 0 <= 0.2:
+                        socketio.emit('frame', video_json, room=client)
 
             
             audio_data = self.cam.get_audio_data()
@@ -68,11 +70,16 @@ class GenerateFrames:
             socketio.emit('alert', alert_json)       
             
     def add_client(self, sid):
-        self.clients.add(sid)
+        self.clients[request.sid] = 0
+        
+    def update_client_timediff(self, client=None, diff=None):
+        if client==None:
+            return
+        self.clients[client] = diff
 
     def remove_client(self, sid):
-        if sid in self.clients:
-            self.clients.remove(sid)
+        if sid in self.clients.keys():
+            self.clients.pop(sid)
         if not self.clients:
             self.stop()
 
@@ -148,6 +155,10 @@ def handle_connect():
 def handle_disconnect():
     print('Client disconnected')
     frame_generator.remove_client(request.sid)
+    
+@socketio.on('time_diff')
+def handle_time_diff(time_diff):
+    frame_generator.update_client_timediff(client=request.sid, diff=time_diff)
 
 if __name__ == '__main__':
     pass
