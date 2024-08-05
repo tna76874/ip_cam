@@ -35,41 +35,22 @@ socket.on('frame', function(data) {
 
 // AUDIO
 
-socket.on('audio', function(data) {
-    if (data.history && data.history.length > 0) {
-        // Hole den letzten Level-Wert aus der history
-        const lastEntry = data.history[data.history.length - 1];
-        const currentLevel = lastEntry.level;
+socket.on('alert', function(data) {
+    const alert_ratio_audio = data.audio;
+    const alert_ratio_video = data.video;
 
-        // Bestimme die alert_ratio (hier als Beispiel, wie sie berechnet werden könnte)
-        const alert_ratio = data.alert_ratio; // Angenommen, alert_ratio wird direkt aus den Daten übernommen
+    let color = 'black';
 
-        // Bestimme die Schriftfarbe basierend auf der alert-Bedingung und alert_ratio
-        let color = 'black'; // Default color
-
-        // Bestimme das Vorzeichen von currentLevel
-        let sign = '';
-        if (currentLevel > 0) {
-            sign = '+';
-        } else if (currentLevel < 0) {
-            sign = '-';
-        }
-
-        if (data.alert) { // Überprüfe, ob der Alarm aktiviert ist
-            color = 'red'; // Setze die Farbe auf rot, wenn der Alarm aktiv ist
-            playAlertAudio(); // Spiele den Alarm ab
-        } else if (alert_ratio > 0.2 && alert_ratio < 0.6) {
-            color = 'orange'; // Setze orange, wenn alert_ratio zwischen 0.2 und 0.6 liegt
-        }
-
-        // Aktualisiere die Text- und Hintergrundfarbe des Alert-Level-Elements
-        alertLevelElement.textContent = 'Alert Level: ' + alert_ratio.toFixed(2) + '('  + currentLevel.toFixed(2) + ')';
-        alertLevelElement.style.color = color;
-    } else {
-        // Falls keine history-Daten vorhanden sind
-        alertLevelElement.textContent = 'Alert Level: N/A';
-        alertLevelElement.style.color = 'black';
+    if (data.alert) {
+        color = 'red';
+        playAlertAudio();
+    } else if (alert_ratio_audio > 0.2 || alert_ratio_video > 0.065) {
+        color = 'orange';
     }
+
+    // Aktualisiere die Text- und Hintergrundfarbe des Alert-Level-Elements
+    alertLevelElement.textContent = 'Alert Level: A:' + alert_ratio_audio.toFixed(2) + ', V:'  + alert_ratio_video.toFixed(2);
+    alertLevelElement.style.color = color;
 });
 
 let alertFile = new Audio("{{ url_for('static', filename='alert.mp3') }}");

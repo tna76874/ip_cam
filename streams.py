@@ -70,6 +70,13 @@ class CameraEntity:
         self._init_audio_stream()
         self._init_video_stream()
         
+    def record_audio_baseline(self):
+        self.a._record_baseline()
+        while self.a.baseline==None:
+            print("getting audio stream")
+            self._init_audio_stream()
+            self.a._record_baseline()
+        
     def _init_video_stream(self):
         self.v = VideoMonitor(self.get_video_stream())
     
@@ -100,7 +107,7 @@ class CameraEntity:
                 time.sleep(0.1)
                 audio = self.a.get_recent_audio_data()
             
-            passed = audio[-1].get('level') != None
+            passed = (audio[-1].get('level') != None) and (self.a.online==True)
             if not passed:
                 self._get_ip()
                 self._init_audio_stream()
@@ -146,7 +153,7 @@ class AudioMonitor:
         self.threshold = kwargs.get('threshold', 1.5)  # Schwellenwert für den Alarm in dB
         self.duration = kwargs.get('duration', 6)      # Dauer der Baseline-Aufnahme
         self.sample_rate = kwargs.get('sample_rate', 8000)  # Abtastrate, Standardwert 8000
-        self.baseline = kwargs.get('baseline', 21)
+        self.baseline = kwargs.get('baseline', 26)
         self.chunk = 1024  # Größe der Datenblöcke, die verarbeitet werden
         self.history_duration = 10 * 60  # 10 Minuten in Sekunden
         self.history_chunk_count = int(self.history_duration * self.sample_rate / self.chunk)
@@ -154,6 +161,7 @@ class AudioMonitor:
         self.running = False
         self.alertlevel = None
         self.current_level = None
+        self.online = None
         
     def _init_queue(self):
         self.audio_data_queue = queue.deque(maxlen=self.history_chunk_count)
@@ -167,7 +175,9 @@ class AudioMonitor:
         try:
             # Überprüfe, ob audio_data leer ist
             if len(audio_data) == 0:
+                self.online = False
                 return None
+            self.online = True
     
             # Berechne den RMS-Wert
             mean_square = np.mean(np.square(audio_data))
@@ -215,12 +225,7 @@ class AudioMonitor:
 
             self.alertlevel = self.baseline + self.threshold
             self.audio_data_queue.append({'level' : float(self.current_level)-float(self.alertlevel), 'time' : datetime.datetime.now(pytz.timezone('Europe/Berlin')).isoformat()})
-            # if current_level > self.alertlevel:
-            #     print(f"{datetime.datetime.now().strftime('%d.%m.%Y %H:%M:%S')} {self.alertlevel} / {current_level}: ALERT")
-            # else:
-            #     print(f"{datetime.datetime.now().strftime('%d.%m.%Y %H:%M:%S')} {self.alertlevel} / {current_level}")
 
-            # print(float(current_level)-float(self.alertlevel))
             
     def start_monitoring(self):
         if self.running == False:
@@ -245,7 +250,7 @@ class AudioMonitor:
 # Beispiel zur Verwendung der Klasse
 if __name__ == "__main__":
     conf = ConfigReader('data/config.yml')
-    self = CameraEntity(ip=conf.get_ip(),
+    self = CameraEntity(hostname=conf.get_hostname(),
                         username=conf.get_auth().get('user'),
                         password=conf.get_auth().get('pw'))
     self.init_streams()

@@ -21,8 +21,10 @@ class GenerateFrames:
         self.alert = False
         
         self._alert_a = AudioAlert(threshold=0.6)
+        self._alert_v = VideoAlert()
         self._alert = AlertFrame()
         self._alert.add_alert_entity(self._alert_a)
+        self._alert.add_alert_entity(self._alert_v)
 
     def start(self):
         if not self.running.is_set():
@@ -41,21 +43,29 @@ class GenerateFrames:
             
             frame = self.cam.get_frame() 
             if frame is not None:
-                # Konvertiere das Bild in Base64, um es über WebSocket zu senden
                 _, buffer = cv2.imencode('.jpg', frame)
+                self._alert_v.add_frame(frame)
                 frame_data = base64.b64encode(buffer).decode('utf-8')
-                socketio.emit('frame', {'data': frame_data, 'time' : datetime.datetime.now(pytz.timezone('Europe/Berlin')).isoformat()})
+                video_json =  {
+                                'data': frame_data,
+                                'time' : datetime.datetime.now(pytz.timezone('Europe/Berlin')).isoformat(),
+                              }
+                socketio.emit('frame', video_json)
 
+            
             audio_data = self.cam.get_audio_data()
             if audio_data!=[]:
-                self._alert_a.evaluate(audio_data)               
+                self._alert_a.evaluate(audio_data) 
+                alert_json = {'audio' : self._alert_a.alert_level}
+            else:
+                alert_json = {'audio' : None }
+                
+            alert_json.update({
+                'alert' : self._alert.status(),
+                'video' : self._alert_v.alert_level,
+            })
 
-                audio_json = {
-                    'alert' : self._alert.status(),
-                    'alert_ratio' : self._alert.level(),
-                    'history': [audio_data[-1]],
-                }
-                socketio.emit('audio', audio_json)       
+            socketio.emit('alert', alert_json)       
             
     def add_client(self, sid):
         self.clients.add(sid)
@@ -89,7 +99,9 @@ def set_baseline():
         frame_generator.cam._init_audio_stream()
         frame_generator.cam.a.start_monitoring()
         
-    frame_generator.cam.a._record_baseline()
+    frame_generator.cam.record_audio_baseline()
+    frame_generator._alert_v._set_baseline()
+    
     response = {
         'status': 'success',
         'message': 'Baseline gesetzt',

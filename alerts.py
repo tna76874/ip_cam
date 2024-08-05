@@ -5,6 +5,8 @@
 import datetime
 import pytz
 import numpy as np
+import cv2
+import queue
 
 class AlertEntity:
     def __init__(self, **kwargs):
@@ -16,6 +18,65 @@ class AlertEntity:
 
     def get_status(self):
         return self.status
+    
+class VideoAlert(AlertEntity):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self._last_frame = None
+        self._frame_diff = None
+        self._frame_queue = queue.deque(maxlen=300)
+        self._threshold = 0.07
+        
+    def _set_baseline(self):
+        self._threshold = self.alert_level + 0.02
+        
+    def add_frame(self, frame):
+        # Konvertiere den Frame in Graustufen
+        gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+        # Wende Gaussian Blur an, um Rauschen zu reduzieren
+        blurred_frame = cv2.GaussianBlur(gray_frame, (5, 5), 0)
+        
+        if self._last_frame is not None:
+            # Berechne die Differenz zwischen dem aktuellen und dem letzten Frame
+            gray_last_frame = cv2.cvtColor(self._last_frame, cv2.COLOR_BGR2GRAY)
+            blurred_last_frame = cv2.GaussianBlur(gray_last_frame, (7, 7), 0)
+            frame_diff = cv2.absdiff(blurred_last_frame, blurred_frame)
+
+            # Schwellwert anwenden, um nur signifikante Änderungen zu berücksichtigen
+            _, thresh = cv2.threshold(frame_diff, 3, 255, cv2.THRESH_BINARY)
+
+            # Zähle die Anzahl der nicht-null Pixel in der Differenzmatrix
+            diff_value = cv2.countNonZero(thresh)
+    
+            # Berechne die Gesamtanzahl der Pixel im Bild
+            total_pixels = frame.shape[0] * frame.shape[1]  # Höhe * Breite
+    
+            # Berechne den Anteil der Pixel mit Differenz
+            diff_ratio = diff_value / total_pixels if total_pixels > 0 else 0
+
+            # Speichere das Ergebnis mit Zeitstempel in der Queue
+            timestamp = datetime.datetime.now(pytz.timezone('Europe/Berlin')).isoformat()
+            self._frame_queue.append((timestamp, diff_ratio))
+
+        # Speichere den aktuellen Frame als letzten Frame
+        self._last_frame = frame
+        
+        self._evaluate()
+
+    def _evaluate(self):
+        try:
+            video_data = self.get_frame_diffs()
+            now = datetime.datetime.fromisoformat(video_data[-1][0])
+            levels = [data[1] for data in video_data if now - datetime.datetime.fromisoformat(data[0]) <= datetime.timedelta(seconds=30)]
+            self.alert_level = float(np.mean(levels))
+            self.status = self.alert_level > self._threshold
+        except:
+            pass
+
+    def get_frame_diffs(self):
+        return list(self._frame_queue)
+
     
 class AudioAlert(AlertEntity):
     def __init__(self, **kwargs):
@@ -97,6 +158,32 @@ class AlertFrame:
 
 
 
-# Beispielverwendung
 if __name__ == "__main__":
-    pass
+    self = VideoAlert()
+
+    # Beispiel für das Hinzufügen von Frames (hier simuliert)
+    cap = cv2.VideoCapture(1)  # Verwende die Standardkamera
+
+    while cap.isOpened():
+        ret, frame = cap.read()
+        if not ret:
+            break
+
+        self.add_frame(frame)
+
+        # Zeige den aktuellen Frame an
+        cv2.imshow("Video Stream", frame)
+        
+        try:
+            print(list(self._frame_queue)[-1])
+            print(self.alert_level)
+            print(self.status)
+        except:
+            pass
+
+        # Beenden, wenn 'q' gedrückt wird
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+
+    cap.release()
+    cv2.destroyAllWindows()
