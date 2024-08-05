@@ -55,15 +55,17 @@ class GenerateFrames:
         }
         while self.running.is_set():
             self.cam.a.start_monitoring()
+            now = datetime.datetime.now(pytz.timezone('Europe/Berlin')).isoformat()
             
             frame = self.cam.get_frame() 
             if frame is not None:
                 self._alert_v.add_frame(frame)
                 video_json =  {
-                                'time' : datetime.datetime.now(pytz.timezone('Europe/Berlin')).isoformat(),
+                                'time' : now,
                               }
                 for client in self.clients.keys():
-                    timediff = self.clients.get(client, 0) or 0
+                    serverTime = self.clients.get(client, {}).get('serverTime', now) or now
+                    timediff = (datetime.datetime.fromisoformat(serverTime) - datetime.datetime.fromisoformat(now)).total_seconds()
                     quality = None
                     for threshold, q in quality_mapping.items():
                         if timediff <= threshold:
@@ -73,7 +75,7 @@ class GenerateFrames:
                     if quality is not None:
                         video_json['data'] = self._compress_frame(frame=frame, quality=quality)
                     else:
-                        video_json['data'] = False
+                        video_json['data'] = None
                         
                     socketio.emit('frame', video_json, room=client)
                         
@@ -93,12 +95,12 @@ class GenerateFrames:
             socketio.emit('alert', alert_json)       
             
     def add_client(self, sid):
-        self.clients[request.sid] = 0
+        self.clients[request.sid] = {}
         
-    def update_client_timediff(self, client=None, diff=None):
-        if client==None:
+    def update_client_timediff(self, client=None, data=None):
+        if client==None or data==None:
             return
-        self.clients[client] = diff
+        self.clients[client] = data
 
     def remove_client(self, sid):
         if sid in self.clients.keys():
@@ -181,7 +183,7 @@ def handle_disconnect():
     
 @socketio.on('time_diff')
 def handle_time_diff(time_diff):
-    frame_generator.update_client_timediff(client=request.sid, diff=time_diff)
+    frame_generator.update_client_timediff(client=request.sid, data=time_diff)
 
 if __name__ == '__main__':
     pass
