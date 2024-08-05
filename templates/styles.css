@@ -32,27 +32,22 @@ body {
 #videoContainer {
     position: relative;
     display: inline-block;
-    width: 80vw; /* Breite 80% der Viewport-Breite */
-    height: 60vh; /* Höhe 60% der Viewport-Höhe */
-    max-width: 640px; /* Maximale Breite */
-    max-height: 480px; /* Maximale Höhe */
-    overflow: hidden; /* Überlauf verstecken */
-    border: 2px solid #ccc; /* Rahmen für bessere Sichtbarkeit */
-    border-radius: 8px; /* Abgerundete Ecken */
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* Schatten für Tiefe */
-    margin: auto; /* Zentriert das Container-Div */
+    max-height: 80vh;
+    max-width: 90vh;
+    width: 90vw;
+    overflow: hidden;
+    margin: auto;
 }
 
 #video {
-    width: 100%; 
-    height: auto;
-    max-height: 100vh;
-    max-width: 100vw;
-    object-fit: contain;
-    border: 2px solid #ddd;
-    border-radius: 10px;
-    margin-bottom: 20px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    width: 100%; /* Breite auf 100% setzen */
+    height: 100%; /* Höhe auf 100% setzen */
+    max-height: 80vh;
+    max-width: 90vh;
+    object-fit: contain; /* Bild/Video innerhalb des Containers anpassen */
+    border: 2px solid #ddd; /* Rahmen für das Video */
+    border-radius: 10px; /* Abgerundete Ecken */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Schatten für Tiefe */
 }
 
 /* Audio player styling */
