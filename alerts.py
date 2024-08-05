@@ -24,12 +24,16 @@ class VideoAlert(AlertEntity):
         super().__init__(**kwargs)
         self._last_frame = None
         self._frame_diff = None
-        self._frame_queue = queue.deque(maxlen=300)
         self._default_threshold = 0.07
         self._threshold = 0.07
+        self._init_queue()
+        
+    def _init_queue(self):
+        self._frame_queue = queue.deque(maxlen=300)
         
     def _set_baseline(self):
         self._threshold = self._default_threshold
+        self._init_queue()       
         
     def add_frame(self, frame):
         # Konvertiere den Frame in Graustufen
@@ -83,7 +87,7 @@ class AudioAlert(AlertEntity):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self._data = None
-        self._threshold = kwargs.get('threshold', 0.6)
+        self._threshold = kwargs.get('threshold', 0.4)
     
     def evaluate(self, data):
         self._set_data(data)

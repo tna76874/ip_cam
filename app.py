@@ -20,7 +20,7 @@ class GenerateFrames:
         self.thread = None
         self.alert = False
         
-        self._alert_a = AudioAlert(threshold=0.6)
+        self._alert_a = AudioAlert(threshold=0.4)
         self._alert_v = VideoAlert()
         self._alert = AlertFrame()
         self._alert.add_alert_entity(self._alert_a)

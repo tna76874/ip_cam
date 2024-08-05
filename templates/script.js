@@ -19,10 +19,22 @@ function fetchServerTime(callback) {
 
 let lastFrameTime = null;
 
+// Formatieren des Datums
+const options = {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false // 24-Stunden-Format
+};
+
 socket.on('frame', function(data) {
     // Serverzeit abrufen und dann den Frame verarbeiten
     fetchServerTime(function(serverTime) {
         const frameTime = new Date(data.time); // Zeit des empfangenen Frames
+        const formattedDate = frameTime.toLocaleString('de-DE', options); // 'de-DE' für deutsches Format
         const timeDiff = (serverTime - frameTime) / 1000; // Zeitdifferenz in Sekunden
 
         if (data.data) {
@@ -32,7 +44,7 @@ socket.on('frame', function(data) {
         lastFrameTime = frameTime;
 
         // Lag-Anzeige immer aktualisieren
-        document.getElementById('lagDisplay').innerText = 'Δ' + timeDiff.toFixed(2) + 's';
+        document.getElementById('lagDisplay').innerText = formattedDate + ' Δ' + timeDiff.toFixed(2) + 's';
 
         const response = {
             diff: diff,

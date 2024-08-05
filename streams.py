@@ -14,6 +14,8 @@ import time
 import pytz
 import nmap
 
+import noisereduce as nr
+
 from network import *
 
 class ConfigReader:
@@ -60,6 +62,8 @@ class CameraEntity:
         
         self.baseline = kwargs.get('baseline')
         
+        self._debug = kwargs.get('debug', False) == True
+        
         self.v = None
         self.a = None
         
@@ -81,7 +85,7 @@ class CameraEntity:
         self.v = VideoMonitor(self.get_video_stream())
     
     def _init_audio_stream(self):
-        self.a = AudioMonitor(self.get_audio_stream(), baseline=self.baseline)
+        self.a = AudioMonitor(self.get_audio_stream(), baseline=self.baseline, debug = self._debug)
         
     def get_frame(self):
         frame=None
@@ -163,13 +167,19 @@ class AudioMonitor:
         self.current_level = None
         self.online = None
         
+        self._debug = kwargs.get('debug', False) == True
+        
     def _init_queue(self):
         self.audio_data_queue = queue.deque(maxlen=self.history_chunk_count)
 
     def get_chunk(self):
         if self.audio_stream==None:
             return None
-        return self.audio_stream.raw.read(self.chunk)
+        chunk = self.audio_stream.raw.read(self.chunk)
+        chunk_buffer = np.frombuffer(chunk, dtype=np.int16)
+        chunk_denoised = nr.reduce_noise(y=chunk_buffer, sr=8000)
+        return chunk_denoised
+
 
     def _calculate_db(self, audio_data):
         try:
@@ -200,7 +210,7 @@ class AudioMonitor:
 
         recorded_data = self.get_recent_audio_data()
         if len(recorded_data)>num_chunks:
-            self.baseline = float(self._calculate_db([k['abs'] for k in recorded_data]))
+            self.baseline = float(self._calculate_db([k['abs'] for k in recorded_data[num_chunks-1:]]))
             self._init_queue()
             print(f"Baseline set to {self.baseline}")
             return
@@ -212,7 +222,7 @@ class AudioMonitor:
             data = self.get_chunk()
             if isinstance(data, type(None)):
                 return
-            audio_data.append(np.frombuffer(data, dtype=np.int16))
+            audio_data.append(data)
 
         audio_data = np.concatenate(audio_data)
         self.baseline = self._calculate_db(audio_data)
@@ -222,7 +232,7 @@ class AudioMonitor:
     def _monitor_audio(self):
         while self.running:
             data = self.get_chunk()
-            if not data:
+            if isinstance(data,type(None)):
                 self.online = False
                 break
             self.online = True
@@ -236,8 +246,9 @@ class AudioMonitor:
                                           'time' : datetime.datetime.now(pytz.timezone('Europe/Berlin')).isoformat(),
                                           'abs' : audio_data,
                                           })
-            # print(list(self.audio_data_queue)[-1])
-            # print(self.alertlevel)
+            if self._debug==True:
+                print(list(self.audio_data_queue)[-1])
+                print(self.alertlevel)
             
     def start_monitoring(self):
         if self.running == False:
@@ -263,7 +274,8 @@ if __name__ == "__main__":
     self = CameraEntity(hostname=conf.get_hostname(),
                         subnet=conf.get_subnet(),
                         username=conf.get_auth().get('user'),
-                        password=conf.get_auth().get('pw'))
+                        password=conf.get_auth().get('pw'),
+                        debug=True)
     self.init_streams()
     self.a.start_monitoring()
     #self.a.stop_monitoring()
