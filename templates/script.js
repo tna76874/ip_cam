@@ -34,20 +34,24 @@ socket.on('frame', function(data) {
     // Serverzeit abrufen und dann den Frame verarbeiten
     fetchServerTime(function(serverTime) {
         const frameTime = new Date(data.time); // Zeit des empfangenen Frames
-        const formattedDate = frameTime.toLocaleString('de-DE', options); // 'de-DE' für deutsches Format
         const timeDiff = (serverTime - frameTime) / 1000; // Zeitdifferenz in Sekunden
+        const formattedDate = frameTime.toLocaleString('de-DE', options); // 'de-DE' für deutsches Format
 
         if (data.data) {
-            document.getElementById('video').src = 'data:image/jpeg;base64,' + data.data;
+            const videoElement = document.getElementById('video');
+            videoElement.src = 'data:image/jpeg;base64,' + data.data;
+            videoElement.style.width = '100%';
+            videoElement.style.height = 'auto';
         }
 
         lastFrameTime = frameTime;
+
 
         // Lag-Anzeige immer aktualisieren
         document.getElementById('lagDisplay').innerText = formattedDate + ' Δ' + timeDiff.toFixed(2) + 's';
 
         const response = {
-            diff: diff,
+            diff: timeDiff,
             serverTime: serverTime
         };
         socket.emit('time_diff', response);
@@ -103,7 +107,7 @@ socket.on('disconnect', function() {
 
 // THRESHOLD SETZEN
 async function fetchThreshold() {
-    const response = await fetch('/api/server_time');
+    const response = await fetch('/api/get_audio_threshold');
     const data = await response.json();
     const threshold = data.threshold;
     document.getElementById('thresholdSlider').value = threshold;

@@ -4,6 +4,7 @@ from flask import Flask, render_template, Response, stream_with_context, request
 from flask_socketio import SocketIO, emit
 from threading import Thread, Event
 import time
+from dateutil import parser
 from streams import *
 from alerts import *
 import base64
@@ -38,20 +39,25 @@ class GenerateFrames:
             self.thread.join()
     
     def _compress_frame(self, frame=None, quality=100):
-        quality = 10
         if quality!=100:
             encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), quality]
-            _, buffer = cv2.imencode('.jpg', frame, encode_param)
+            scale_factor = np.sqrt(quality / 100)
+            new_width = int(frame.shape[1] * scale_factor)
+            new_height = int(frame.shape[0] * scale_factor)
+            
+            resized_frame = cv2.resize(frame, (new_width, new_height), interpolation=cv2.INTER_AREA)
+
+            _, buffer = cv2.imencode('.jpg', resized_frame, encode_param)
         else:
-            buffer = frame
+            _, buffer = cv2.imencode('.jpg', frame)
         encoded = base64.b64encode(buffer).decode('utf-8')
         return encoded
 
     def _generate_frames(self):
         quality_mapping = {
-            0.1: 100,
-            1: 80,
-            2: 30,
+            0.1: 70,
+            1: 50,
+            2: 20,
             5: 10,
         }
         while self.running.is_set():
@@ -64,9 +70,10 @@ class GenerateFrames:
                 video_json =  {
                                 'time' : now,
                               }
-                for client in self.clients.keys():
+                
+                for client in self.clients.copy().keys():
                     serverTime = self.clients.get(client, {}).get('serverTime', now) or now
-                    timediff = (datetime.datetime.fromisoformat(serverTime) - datetime.datetime.fromisoformat(now)).total_seconds()
+                    timediff = (parser.isoparse(serverTime) - datetime.datetime.fromisoformat(now)).total_seconds()
                     quality = None
                     for threshold, q in quality_mapping.items():
                         if timediff <= threshold:
@@ -153,7 +160,7 @@ def set_audio_threshold():
     }
     return jsonify(response)
 
-@app.route('/api/server_time', methods=['GET'])
+@app.route('/api/get_audio_threshold', methods=['GET'])
 def get_audio_threshold():
     return jsonify({'threshold': frame_generator._alert_a._threshold})
 
