@@ -25,8 +25,11 @@ socket.on('frame', function(data) {
         const frameTime = new Date(data.time); // Zeit des empfangenen Frames
         const timeDiff = (serverTime - frameTime) / 1000; // Zeitdifferenz in Sekunden
 
-        document.getElementById('video').src = 'data:image/jpeg;base64,' + data.data;
-        lastFrameTime = frameTime; // Aktualisiere den Zeitstempel des letzten Frames
+        if (data.data !== false) {
+            document.getElementById('video').src = 'data:image/jpeg;base64,' + data.data;
+        }
+
+        lastFrameTime = frameTime;
 
         // Lag-Anzeige immer aktualisieren
         document.getElementById('lagDisplay').innerText = 'Δ' + timeDiff.toFixed(2) + 's';

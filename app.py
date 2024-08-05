@@ -52,8 +52,10 @@ class GenerateFrames:
                               }
                 for client in self.clients.keys():
                     timediff = self.clients.get(client, 0) or 0
-                    if timediff <= 0.2:
-                        socketio.emit('frame', video_json, room=client)
+                    if timediff >= 0.2:
+                        video_json['data'] = False
+                    socketio.emit('frame', video_json, room=client)
+                        
             
             audio_data = self.cam.get_audio_data()
             if audio_data!=[]:
