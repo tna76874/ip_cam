@@ -51,11 +51,9 @@ class GenerateFrames:
                                 'time' : datetime.datetime.now(pytz.timezone('Europe/Berlin')).isoformat(),
                               }
                 for client in self.clients.keys():
-                    if self.clients.get(client, 0) or 0 <= 0.2:
+                    timediff = self.clients.get(client, 0) or 0
+                    if timediff <= 0.2:
                         socketio.emit('frame', video_json, room=client)
-                    else:
-                        print(f"Skipping {client} with timediff {self.clients.get(client, 0)}")
-
             
             audio_data = self.cam.get_audio_data()
             if audio_data!=[]:
