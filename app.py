@@ -38,6 +38,7 @@ class GenerateFrames:
             self.thread.join()
     
     def _compress_frame(self, frame=None, quality=100):
+        quality = 10
         if quality!=100:
             encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), quality]
             _, buffer = cv2.imencode('.jpg', frame, encode_param)
