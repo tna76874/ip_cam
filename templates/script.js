@@ -81,7 +81,7 @@ socket.on('audio', function(data) {
         }
 
         // Aktualisiere die Text- und Hintergrundfarbe des Alert-Level-Elements
-        alertLevelElement.textContent = 'Alert Level: ' + alert_ratio.toFixed(2) + '('  + sign + ')';
+        alertLevelElement.textContent = 'Alert Level: ' + alert_ratio.toFixed(2) + '('  + currentLevel.toFixed(2) + ')';
         alertLevelElement.style.color = color;
     } else {
         // Falls keine history-Daten vorhanden sind

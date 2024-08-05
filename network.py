@@ -40,7 +40,10 @@ class DeviceScanner:
         return ip_addresses
 
     def _clean_hostname(self, hostname):
-        return '.'.join(hostname.split(".")[:-1])
+        last_dot_index = hostname.rfind('.')
+        if last_dot_index != -1:
+            return hostname[:last_dot_index]
+        return hostname
             
     def find_host(self, hostname, mac=None, scan=None):
         """Finds the IP address of the device with the given hostname by scanning the local network."""
