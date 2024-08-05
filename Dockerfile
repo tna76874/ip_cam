@@ -10,6 +10,7 @@ RUN pip install -r requirements.txt && chmod -R +x /app
 
 COPY app.py /app/app.py
 COPY network.py /app/network.py
+COPY alerts.py /app/alerts.py
 COPY streams.py /app/streams.py
 COPY templates /app/templates
 COPY static /app/static

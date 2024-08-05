@@ -5,6 +5,7 @@ from flask_socketio import SocketIO, emit
 from threading import Thread, Event
 import time
 from streams import *
+from alerts import *
 import base64
 import pytz
 import wave
@@ -18,6 +19,10 @@ class GenerateFrames:
         self.running = Event()
         self.thread = None
         self.alert = False
+        
+        self._alert_a = AudioAlert(threshold=0.6)
+        self._alert = AlertFrame()
+        self._alert.add_alert_entity(self._alert_a)
 
     def start(self):
         if not self.running.is_set():
@@ -43,16 +48,11 @@ class GenerateFrames:
 
             audio_data = self.cam.get_audio_data()
             if audio_data!=[]:
-
-                now = datetime.datetime.fromisoformat(audio_data[-1]['time'])
-                
-                levels = [data.get('level') for data in audio_data if now - datetime.datetime.fromisoformat(data['time']) <= datetime.timedelta(seconds=30)]
-                alert_ratio = float(np.sum(np.array(levels) > 0) / len(levels) if len(levels) > 0 else 0)
-                self.alert = alert_ratio >= 0.6
+                self._alert_a.evaluate(audio_data)               
 
                 audio_json = {
-                    'alert' : self.alert,
-                    'alert_ratio' : alert_ratio,
+                    'alert' : self._alert.status(),
+                    'alert_ratio' : self._alert.level(),
                     'history': [audio_data[-1]],
                 }
                 socketio.emit('audio', audio_json)       
@@ -71,6 +71,7 @@ conf = ConfigReader('data/config.yml')
 cam = CameraEntity(hostname=conf.get_hostname(),
                    subnet=conf.get_subnet(),
                    mac=conf.get_mac(),
+                   baseline=conf.get_baseline(),
                    username=conf.get_auth().get('user'),
                    password=conf.get_auth().get('pw'))
 cam.init_streams()
@@ -95,9 +96,29 @@ def set_baseline():
     }
     return jsonify(response)
 
-@app.route('/alert.mp3')
-def serve_mp3():
-    return send_from_directory('static', 'alert.mp3')
+@app.route('/api/alert_enable', methods=['GET'])
+def api_alert_enable():
+    frame_generator._alert.enable()
+    return jsonify({'status': frame_generator._alert.enabled})
+
+@app.route('/api/alert_disable', methods=['GET'])
+def api_alert_disable():
+    frame_generator._alert.disable()
+    return jsonify({'status': frame_generator._alert.enabled})
+
+@app.route('/api/alert_toggle', methods=['GET'])
+def api_alert_toggle():
+    frame_generator._alert.toggle()
+    return jsonify({'status': frame_generator._alert.enabled})
+
+@app.route('/api/alert_is_enabled', methods=['GET'])
+def api_alert_is_enabled():
+    return jsonify({'status': frame_generator._alert.enabled})
+
+@app.route('/api/server_time', methods=['GET'])
+def get_server_time():
+    server_time = datetime.datetime.now(pytz.timezone('Europe/Berlin')).isoformat()
+    return jsonify({'time': server_time})
 
 @app.route('/')
 def index():

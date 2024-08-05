@@ -36,6 +36,9 @@ class ConfigReader:
 
     def get_mac(self):
         return self.config_data.get('host', {}).get('mac')
+    
+    def get_baseline(self):
+        return self.config_data.get('baseline')
 
     def get_auth(self):
         return {
@@ -55,6 +58,8 @@ class CameraEntity:
         self.video_url_auth = f'http://{self.username}:{self.password}@{self.ip}:80/video.cgi'
         self.audio_url = f'http://{self.ip}/audio.cgi'
         
+        self.baseline = kwargs.get('baseline')
+        
         self.v = None
         self.a = None
         
@@ -69,7 +74,7 @@ class CameraEntity:
         self.v = VideoMonitor(self.get_video_stream())
     
     def _init_audio_stream(self):
-        self.a = AudioMonitor(self.get_audio_stream())
+        self.a = AudioMonitor(self.get_audio_stream(), baseline=self.baseline)
         
     def get_frame(self):
         frame=None
@@ -141,15 +146,18 @@ class AudioMonitor:
         self.threshold = kwargs.get('threshold', 1.5)  # Schwellenwert für den Alarm in dB
         self.duration = kwargs.get('duration', 6)      # Dauer der Baseline-Aufnahme
         self.sample_rate = kwargs.get('sample_rate', 8000)  # Abtastrate, Standardwert 8000
-        self.baseline = None                             # Baseline-Wert
+        self.baseline = kwargs.get('baseline', 21)
         self.chunk = 1024  # Größe der Datenblöcke, die verarbeitet werden
         self.history_duration = 10 * 60  # 10 Minuten in Sekunden
         self.history_chunk_count = int(self.history_duration * self.sample_rate / self.chunk)
-        self.audio_data_queue = queue.deque(maxlen=self.history_chunk_count)
+        self._init_queue()
         self.running = False
         self.alertlevel = None
         self.current_level = None
-                
+        
+    def _init_queue(self):
+        self.audio_data_queue = queue.deque(maxlen=self.history_chunk_count)
+
     def get_chunk(self):
         if self.audio_stream==None:
             return None
@@ -192,6 +200,7 @@ class AudioMonitor:
 
         audio_data = np.concatenate(audio_data)
         self.baseline = self._calculate_db(audio_data)
+        self._init_queue()
         print(f"Baseline recorded: {self.baseline}")
 
     def _monitor_audio(self):
@@ -215,7 +224,8 @@ class AudioMonitor:
             
     def start_monitoring(self):
         if self.running == False:
-            self._record_baseline()
+            if self.baseline==None:
+                self._record_baseline()
             print("Starting audio monitoring...")
             self.running = True
             self.monitor_thread = threading.Thread(target=self._monitor_audio)
@@ -235,7 +245,9 @@ class AudioMonitor:
 # Beispiel zur Verwendung der Klasse
 if __name__ == "__main__":
     conf = ConfigReader('data/config.yml')
-    self = CameraEntity(ip=conf.get_ip(), username=conf.get_auth().get('user'), password=conf.get_auth().get('pw'))
+    self = CameraEntity(ip=conf.get_ip(),
+                        username=conf.get_auth().get('user'),
+                        password=conf.get_auth().get('pw'))
     self.init_streams()
     self.a.start_monitoring()
     #self.a.stop_monitoring()

@@ -83,6 +83,10 @@ audio {
     background-color: #1c5980;
 }
 
+button.disabled {
+    background-color: gray
+}
+
 /* Reset Button styling */
 #setBaselineButton {
     padding: 10px 20px;

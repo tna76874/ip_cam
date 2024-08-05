@@ -1,31 +1,3 @@
-document.addEventListener('DOMContentLoaded', function() {
-    const button = document.getElementById('setBaselineButton');
-
-    button.addEventListener('click', function() {
-        // Button deaktivieren und ausgrauen
-        button.disabled = true;
-        button.style.opacity = 0.5;
-
-        fetch('/api/set_baseline', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({})
-        })
-        .then(response => response.json())
-        .then(data => {
-        })
-        .catch(error => {
-        })
-        .finally(() => {
-            // Button wieder aktivieren und ausgrauen entfernen
-            button.disabled = false;
-            button.style.opacity = 1.0;
-        });
-    });
-});
-
 const socket = io();
 const alertLevelElement = document.getElementById('alert-level');
 const MAX_HISTORY_SECONDS = 20;
@@ -34,18 +6,31 @@ socket.on('connect', function() {
     console.log('WebSocket connected');
 });
 
-let lastFrameTime = null; // Variable zum Speichern des Zeitstempels des letzten Frames
+
+function fetchServerTime(callback) {
+    fetch('/api/server_time')
+        .then(response => response.json())
+        .then(data => {
+            const serverTime = new Date(data.time);
+            callback(serverTime);
+        })
+        .catch(error => console.error('Error fetching server time:', error));
+}
+
+let lastFrameTime = null;
 
 socket.on('frame', function(data) {
-    const currentTime = new Date(); // Aktuelle Zeit
-    const frameTime = new Date(data.time); // Zeit des empfangenen Frames
-    const timeDiff = (currentTime - frameTime) / 1000; // Zeitdifferenz in Sekunden
+    // Serverzeit abrufen und dann den Frame verarbeiten
+    fetchServerTime(function(serverTime) {
+        const frameTime = new Date(data.time); // Zeit des empfangenen Frames
+        const timeDiff = (serverTime - frameTime) / 1000; // Zeitdifferenz in Sekunden
 
-    document.getElementById('video').src = 'data:image/jpeg;base64,' + data.data;
-    lastFrameTime = frameTime; // Aktualisiere den Zeitstempel des letzten Frames
+        document.getElementById('video').src = 'data:image/jpeg;base64,' + data.data;
+        lastFrameTime = frameTime; // Aktualisiere den Zeitstempel des letzten Frames
 
-    // Lag-Anzeige immer aktualisieren
-    document.getElementById('lagDisplay').innerText = 'Δ' + timeDiff.toFixed(2) + 's';
+        // Lag-Anzeige immer aktualisieren
+        document.getElementById('lagDisplay').innerText = 'Δ' + timeDiff.toFixed(2) + 's';
+    });
 });
 
 // AUDIO
@@ -87,8 +72,8 @@ socket.on('audio', function(data) {
     }
 });
 
-let alertFile = new Audio('/alert.mp3'); // Pfad zur MP3-Datei im static-Ordner
-let isPlaying = false; // Flag zum Überwachen, ob das Audio gerade abgespielt wird
+let alertFile = new Audio("{{ url_for('static', filename='alert.mp3') }}");
+let isPlaying = false;
 
 // Funktion zum Abspielen der Audio-Datei
 function playAlertAudio() {
@@ -96,23 +81,83 @@ function playAlertAudio() {
         isPlaying = true;
         alertFile.play()
             .then(() => {
-                // Wenn das Audio erfolgreich abgespielt wird
                 alertFile.onended = () => {
-                    isPlaying = false; // Audio ist beendet, Flag zurücksetzen
+                    isPlaying = false;
                 };
             })
             .catch(error => {
                 console.error('Fehler beim Abspielen der Audio-Datei:', error);
-                isPlaying = false; // Fehlerbehandlung, Flag zurücksetzen
+                alert('Alert');
+                isPlaying = false;
             });
     }
 }
 
-// Event-Listener für die Schaltfläche
-document.getElementById('playButton').addEventListener('click', function() {
-    playAlertAudio();
-});
+// // Event-Listener für die Schaltfläche
+// document.getElementById('playButton').addEventListener('click', function() {
+//     playAlertAudio();
+// });
 
 socket.on('disconnect', function() {
     console.log('WebSocket disconnected');
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    const baselinebutton = document.getElementById('setBaselineButton');
+    const playButton = document.getElementById('playButton');
+
+    baselinebutton.addEventListener('click', function() {
+        // Button deaktivieren und ausgrauen
+        baselinebutton.disabled = true;
+        baselinebutton.style.opacity = 0.5;
+
+        fetch('/api/set_baseline', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({})
+        })
+        .then(response => response.json())
+        .then(data => {
+        })
+        .catch(error => {
+        })
+        .finally(() => {
+            baselinebutton.disabled = false;
+            baselinebutton.style.opacity = 1.0;
+        });
+    });
+
+    // Funktion zum Umschalten des Alarms
+    playButton.addEventListener('click', function() {
+        fetch('/api/alert_toggle')
+            .then(response => response.json())
+            .then(data => {
+                updateButton(data.status);
+            })
+            .catch(error => console.error('Fehler beim Umschalten des Alarms:', error));
+    });
+
+    // Funktion zum Laden des Alarmstatus
+    function loadAlertStatus() {
+        fetch('/api/alert_is_enabled')
+            .then(response => response.json())
+            .then(data => {
+                updateButton(data.status);
+            })
+            .catch(error => console.error('Fehler beim Laden des Alarmstatus:', error));
+    }
+
+    // Funktion zum Aktualisieren des Buttons basierend auf dem Status
+    function updateButton(isEnabled) {
+        if (isEnabled) {
+            playButton.textContent = 'Alarm an';
+            playAlertAudio();
+        } else {
+            playButton.textContent = 'Alarm aus';
+        }
+    }
+
+    loadAlertStatus();
 });
