@@ -25,10 +25,11 @@ class VideoAlert(AlertEntity):
         self._last_frame = None
         self._frame_diff = None
         self._frame_queue = queue.deque(maxlen=300)
+        self._default_threshold = 0.07
         self._threshold = 0.07
         
     def _set_baseline(self):
-        self._threshold = self.alert_level + 0.02
+        self._threshold = self._default_threshold
         
     def add_frame(self, frame):
         # Konvertiere den Frame in Graustufen
@@ -91,8 +92,11 @@ class AudioAlert(AlertEntity):
     def _set_data(self, data):
         self.data = data
         
-    def _evaluate_integral(self):
+    def _evaluate(self):
         try:
+            if len(self.data)<=10:
+                return
+            
             now = datetime.datetime.fromisoformat(self.data[-1]['time'])
             # Filtere die Daten der letzten 30 Sekunden
             recent_data = [data for data in self.data if now - datetime.datetime.fromisoformat(data['time']) <= datetime.timedelta(seconds=30)]
@@ -117,7 +121,7 @@ class AudioAlert(AlertEntity):
         except Exception as e:
             print(f"Error during evaluation: {e}")
 
-    def _evaluate(self):
+    def _evaluate_lin(self):
         try:
             now = datetime.datetime.fromisoformat(self.data[-1]['time'])
             levels = [data.get('level') for data in self.data if now - datetime.datetime.fromisoformat(data['time']) <= datetime.timedelta(seconds=30)]

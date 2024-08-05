@@ -58,7 +58,7 @@ class GenerateFrames:
                 self._alert_a.evaluate(audio_data) 
                 alert_json = {'audio' : self._alert_a.alert_level}
             else:
-                alert_json = {'audio' : None }
+                alert_json = {'audio' : 0 }
                 
             alert_json.update({
                 'alert' : self._alert.status(),
@@ -101,7 +101,7 @@ def set_baseline():
         
     frame_generator.cam.record_audio_baseline()
     frame_generator._alert_v._set_baseline()
-    
+        
     response = {
         'status': 'success',
         'message': 'Baseline gesetzt',

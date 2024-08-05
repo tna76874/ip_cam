@@ -150,7 +150,7 @@ class VideoMonitor:
 class AudioMonitor:
     def __init__(self, audio_stream, **kwargs):
         self.audio_stream = audio_stream
-        self.threshold = kwargs.get('threshold', 1.5)  # Schwellenwert für den Alarm in dB
+        self.threshold = kwargs.get('threshold', 1)  # Schwellenwert für den Alarm in dB
         self.duration = kwargs.get('duration', 6)      # Dauer der Baseline-Aufnahme
         self.sample_rate = kwargs.get('sample_rate', 8000)  # Abtastrate, Standardwert 8000
         self.baseline = kwargs.get('baseline', 26)
@@ -175,9 +175,7 @@ class AudioMonitor:
         try:
             # Überprüfe, ob audio_data leer ist
             if len(audio_data) == 0:
-                self.online = False
                 return None
-            self.online = True
     
             # Berechne den RMS-Wert
             mean_square = np.mean(np.square(audio_data))
@@ -198,8 +196,16 @@ class AudioMonitor:
             return None
 
     def _record_baseline(self):
-        print("Recording baseline...")
         num_chunks = int(self.duration * self.sample_rate / self.chunk)
+
+        recorded_data = self.get_recent_audio_data()
+        if len(recorded_data)>num_chunks:
+            self.baseline = float(self._calculate_db([k['abs'] for k in recorded_data]))
+            self._init_queue()
+            print(f"Baseline set to {self.baseline}")
+            return
+        
+        print("Recording baseline...")
         audio_data = []
 
         for _ in range(num_chunks):
@@ -217,15 +223,21 @@ class AudioMonitor:
         while self.running:
             data = self.get_chunk()
             if not data:
+                self.online = False
                 break
+            self.online = True
             audio_data = np.frombuffer(data, dtype=np.int16)
             self.current_level = self._calculate_db(audio_data)
             if self.current_level is None:
                 continue
 
             self.alertlevel = self.baseline + self.threshold
-            self.audio_data_queue.append({'level' : float(self.current_level)-float(self.alertlevel), 'time' : datetime.datetime.now(pytz.timezone('Europe/Berlin')).isoformat()})
-
+            self.audio_data_queue.append({'level' : float(self.current_level)-float(self.alertlevel),
+                                          'time' : datetime.datetime.now(pytz.timezone('Europe/Berlin')).isoformat(),
+                                          'abs' : audio_data,
+                                          })
+            # print(list(self.audio_data_queue)[-1])
+            # print(self.alertlevel)
             
     def start_monitoring(self):
         if self.running == False:
@@ -246,11 +258,10 @@ class AudioMonitor:
         return list(self.audio_data_queue)
 
 
-
-# Beispiel zur Verwendung der Klasse
 if __name__ == "__main__":
     conf = ConfigReader('data/config.yml')
     self = CameraEntity(hostname=conf.get_hostname(),
+                        subnet=conf.get_subnet(),
                         username=conf.get_auth().get('user'),
                         password=conf.get_auth().get('pw'))
     self.init_streams()
