@@ -73,8 +73,10 @@ function playAlertAudio() {
             })
             .catch(error => {
                 console.error('Fehler beim Abspielen der Audio-Datei:', error);
-                alert('Alert');
-                isPlaying = false;
+                alert('Berechtigungen für Alarmknopf setzen');
+                setTimeout(() => {
+                    isPlaying = false;
+                }, 3000);
             });
     }
 }
