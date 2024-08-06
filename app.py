@@ -188,10 +188,19 @@ def get_server_time():
     server_time = datetime.datetime.now(pytz.timezone('Europe/Berlin')).isoformat()
     return jsonify({'time': server_time})
 
+@app.route('/audio')
+def audio_stream():
+    def generate():
+        with frame_generator.cam.get_audio_stream() as r:
+            for chunk in r.iter_content(chunk_size=1024):
+                if chunk:
+                    yield chunk
+
+    return Response(generate(), mimetype='audio/mpeg')
+
 @app.route('/')
 def index():
     return render_template('index.html')
-
 
 @socketio.on('connect')
 def handle_connect():
